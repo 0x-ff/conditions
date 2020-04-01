@@ -9,6 +9,7 @@ import (
 
 var (
 	falseExpr = &BooleanLiteral{Val: false}
+	trueExpr  = &BooleanLiteral{Val: true}
 )
 
 // Evaluate takes an expr and evaluates it using given args
@@ -34,24 +35,11 @@ func evaluateSubtree(expr Expr, args map[string]interface{}) (Expr, error) {
 		return falseExpr, fmt.Errorf("provided expression is nil")
 	}
 
-	var (
-		err    error
-		lv, rv Expr
-	)
-
 	switch n := expr.(type) {
 	case *ParenExpr:
 		return evaluateSubtree(n.Expr, args)
 	case *BinaryExpr:
-		lv, err = evaluateSubtree(n.LHS, args)
-		if err != nil {
-			return falseExpr, err
-		}
-		rv, err = evaluateSubtree(n.RHS, args)
-		if err != nil {
-			return falseExpr, err
-		}
-		return applyOperator(n.Op, lv, rv)
+		return applyBinaryOperator(n.Op, n.LHS, n.RHS, args)
 	case *VarRef:
 		index := n.Val
 		if _, ok := args[index]; !ok {
@@ -94,13 +82,30 @@ func evaluateSubtree(expr Expr, args map[string]interface{}) (Expr, error) {
 	return expr, nil
 }
 
-// applyOperator is a dispatcher of the evaluation according to operator
-func applyOperator(op Token, l, r Expr) (*BooleanLiteral, error) {
+// applyBinaryOperator is a dispatcher of the evaluation according to binary operator
+func applyBinaryOperator(op Token, l Expr, r Expr, args map[string]interface{}) (*BooleanLiteral, error) {
+	// operators with short circuit (lazy evaluation) support
 	switch op {
 	case AND:
-		return applyAND(l, r)
+		return applyAND(l, r, args)
 	case OR:
-		return applyOR(l, r)
+		return applyOR(l, r, args)
+	case NAND:
+		return applyNAND(l, r, args)
+	}
+
+	// operators without short circuit support
+	l, err := evaluateSubtree(l, args)
+	if err != nil {
+		return falseExpr, err
+	}
+
+	r, err = evaluateSubtree(r, args)
+	if err != nil {
+		return falseExpr, err
+	}
+
+	switch op {
 	case EQ:
 		return applyEQ(l, r)
 	case NEQ:
@@ -115,8 +120,6 @@ func applyOperator(op Token, l, r Expr) (*BooleanLiteral, error) {
 		return applyLTE(l, r)
 	case XOR:
 		return applyXOR(l, r)
-	case NAND:
-		return applyNAND(l, r)
 	case IN:
 		return applyIN(l, r)
 	case NOTIN:
@@ -130,7 +133,7 @@ func applyOperator(op Token, l, r Expr) (*BooleanLiteral, error) {
 	case HAS:
 		return applyHAS(l, r)
 	}
-	return &BooleanLiteral{Val: false}, fmt.Errorf("unsupported operator: %s", op)
+	return falseExpr, fmt.Errorf("unsupported operator: %s", op)
 }
 
 // applyINTERSECTS return true if intersect of two sets is not empty (todo: extend for number slices, upgrade for case insensitive)
@@ -293,48 +296,69 @@ func applyXOR(l, r Expr) (*BooleanLiteral, error) {
 }
 
 // applyNAND applies NAND operation to l/r operands
-func applyNAND(l, r Expr) (*BooleanLiteral, error) {
-	var (
-		a, b bool
-		err  error
-	)
-	a, err = getBoolean(l)
+func applyNAND(l, r Expr, args map[string]interface{}) (*BooleanLiteral, error) {
+	and, err := applyAND(l, r, args)
 	if err != nil {
-		return nil, err
+		return falseExpr, err
 	}
-	b, err = getBoolean(r)
-	if err != nil {
-		return nil, err
-	}
-	return &BooleanLiteral{Val: !(a && b)}, nil
+
+	return &BooleanLiteral{Val: !and.Val}, nil
 }
 
 // applyAND applies && operation to l/r operands
-func applyAND(l, r Expr) (*BooleanLiteral, error) {
+func applyAND(l, r Expr, args map[string]interface{}) (*BooleanLiteral, error) {
 	var (
 		a, b bool
 		err  error
 	)
+
+	l, err = evaluateSubtree(l, args)
+	if err != nil {
+		return falseExpr, err
+	}
 	a, err = getBoolean(l)
 	if err != nil {
-		return nil, err
+		return falseExpr, err
+	}
+
+	if !a {
+		return falseExpr, nil
+	}
+
+	r, err = evaluateSubtree(r, args)
+	if err != nil {
+		return falseExpr, err
 	}
 	b, err = getBoolean(r)
 	if err != nil {
-		return nil, err
+		return falseExpr, err
 	}
 	return &BooleanLiteral{Val: a && b}, nil
 }
 
 // applyOR applies || operation to l/r operands
-func applyOR(l, r Expr) (*BooleanLiteral, error) {
+func applyOR(l, r Expr, args map[string]interface{}) (*BooleanLiteral, error) {
 	var (
 		a, b bool
 		err  error
 	)
+
+	l, err = evaluateSubtree(l, args)
+	if err != nil {
+		return falseExpr, err
+	}
 	a, err = getBoolean(l)
 	if err != nil {
 		return nil, err
+	}
+
+	if a {
+		return trueExpr, nil
+	}
+
+	r, err = evaluateSubtree(r, args)
+	if err != nil {
+		return falseExpr, err
 	}
 	b, err = getBoolean(r)
 	if err != nil {

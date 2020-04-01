@@ -155,3 +155,32 @@ func TestExpressionsVariableNames(t *testing.T) {
 	assert.NotContains(t, args, "foo", "...")
 	assert.NotContains(t, args, "@foo", "...")
 }
+
+func TestEvaluate_ShortCircuit(t *testing.T) {
+	testCases := map[string]struct {
+		cond     string
+		expected bool
+	}{
+		"AND only left": {"false AND [nonExistent]", false},
+		"AND both 1":    {"true AND true", true},
+		"AND both 2":    {"true AND false", false},
+
+		"OR only left": {"true OR [nonExistent]", true},
+		"OR both 1":    {"false OR true", true},
+		"OR both 2":    {"false OR false", false},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			args := make(map[string]interface{})
+
+			p := NewParser(strings.NewReader(tc.cond))
+			expr, err := p.Parse()
+			assert.Nil(t, err)
+
+			result, err := Evaluate(expr, args)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
