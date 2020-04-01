@@ -220,7 +220,7 @@ func (p *Parser) parseExpr() (Expr, error) {
 		return nil, err
 	}
 
-	// Loop over operations and unary exprs and build a tree based on precendence.
+	// Loop over operations and unary exprs and build a tree based on precedence.
 	for {
 		// If the next token is NOT an operator then return the expression.
 		op, tx := p.scanWithMapping()
@@ -239,7 +239,7 @@ func (p *Parser) parseExpr() (Expr, error) {
 			return nil, err
 		}
 
-		// Assign the new root based on the precendence of the LHS and RHS operators.
+		// Assign the new root based on the precedence of the LHS and RHS operators.
 		if lhs, ok := expr.(*BinaryExpr); ok && lhs.Op.Precedence() <= op.Precedence() {
 			expr = &BinaryExpr{
 				LHS: lhs.LHS,
@@ -265,7 +265,7 @@ func (p *Parser) parseUnaryExpr() (Expr, error) {
 
 		// Expect an RPAREN at the end.
 		if tok, _ := p.scanWithMapping(); tok != RPAREN {
-			return nil, fmt.Errorf("Missing )")
+			return nil, fmt.Errorf("missing )")
 		}
 
 		return &ParenExpr{Expr: expr}, nil
@@ -280,36 +280,36 @@ func (p *Parser) parseUnaryExpr() (Expr, error) {
 	case NUMBER:
 		v, err := strconv.ParseFloat(lit, 64)
 		if err != nil {
-			return nil, fmt.Errorf("Unable to parse number")
+			return nil, fmt.Errorf("unable to parse number")
 		}
 		return &NumberLiteral{Val: v}, nil
 	case TRUE, FALSE:
 		return &BooleanLiteral{Val: (tok == TRUE)}, nil
 	case ARRAY:
-		mapVal := []interface{}{}
+		var mapVal []interface{}
 		err := json.Unmarshal([]byte(`[`+lit+`]`), &mapVal)
 		if len(mapVal) == 0 {
-			return nil, fmt.Errorf("Empty Slice not castable")
+			return nil, fmt.Errorf("empty Slice not castable")
 		}
 		switch t := mapVal[0].(type) {
 		case string:
-			values := []string{}
+			var values []string
 			for _, v := range mapVal {
 				values = append(values, v.(string))
 			}
 			return &SliceStringLiteral{Val: values}, err
 		case float64:
-			values := []float64{}
+			var values []float64
 			for _, v := range mapVal {
 				values = append(values, v.(float64))
 			}
 			return &SliceNumberLiteral{Val: values}, err
 		default:
-			return nil, fmt.Errorf("Slice of unknow type %s %T", t, t)
+			return nil, fmt.Errorf("slice of unknow type %s %T", t, t)
 		}
 
 	default:
-		return nil, fmt.Errorf("Parsing error: tok=%v, lit=%v", tok, lit)
+		return nil, fmt.Errorf("parsing error: tok=%v, lit=%v", tok, lit)
 	}
 }
 
@@ -329,16 +329,12 @@ func (p *Parser) scanArray(tt string) (rune, string, error) {
 		// pp.Print(tt)
 		// fmt.Printf("\n")
 	}
-
-	return t, tt, nil
-
 }
 
 // extract [variable] to variable
 // extract [variable][key1][key1] to variable.key1.key2
 // handle variable name which start with a "@"
 func (p *Parser) scanArg() (rune, string, error) {
-	var err error
 	var t rune
 	var tt string
 	var ttTmp string
@@ -365,11 +361,9 @@ func (p *Parser) scanArg() (rune, string, error) {
 		}
 
 		if t != ']' {
-			return t, tt, fmt.Errorf("Args error")
+			return t, tt, fmt.Errorf("args error")
 		}
 	}
-
-	return t, tt, err
 }
 
 func Variables(expression Expr) []string {
@@ -377,7 +371,7 @@ func Variables(expression Expr) []string {
 }
 
 func removeDuplicates(a []string) []string {
-	result := []string{}
+	var result []string
 	seen := map[string]string{}
 	for _, val := range a {
 		if _, ok := seen[val]; !ok {

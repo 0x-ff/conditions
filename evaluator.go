@@ -14,7 +14,7 @@ var (
 // Evaluate takes an expr and evaluates it using given args
 func Evaluate(expr Expr, args map[string]interface{}) (bool, error) {
 	if expr == nil {
-		return false, fmt.Errorf("Provided expression is nil")
+		return false, fmt.Errorf("provided expression is nil")
 	}
 
 	result, err := evaluateSubtree(expr, args)
@@ -25,13 +25,13 @@ func Evaluate(expr Expr, args map[string]interface{}) (bool, error) {
 	case *BooleanLiteral:
 		return n.Val, nil
 	}
-	return false, fmt.Errorf("Unexpected result of the root expression: %#v", result)
+	return false, fmt.Errorf("unexpected result of the root expression: %#v", result)
 }
 
 // evaluateSubtree performs given expr evaluation recursively
 func evaluateSubtree(expr Expr, args map[string]interface{}) (Expr, error) {
 	if expr == nil {
-		return falseExpr, fmt.Errorf("Provided expression is nil")
+		return falseExpr, fmt.Errorf("provided expression is nil")
 	}
 
 	var (
@@ -53,11 +53,7 @@ func evaluateSubtree(expr Expr, args map[string]interface{}) (Expr, error) {
 		}
 		return applyOperator(n.Op, lv, rv)
 	case *VarRef:
-		//index, err := strconv.Atoi(strings.Replace(n.Val, "$", "", -1))
 		index := n.Val
-		if err != nil {
-			return falseExpr, fmt.Errorf("Failed to resolve argument index %s: %s", n.Val, err.Error())
-		}
 		if _, ok := args[index]; !ok {
 			return falseExpr, fmt.Errorf("argument: %v not found", index)
 		}
@@ -79,7 +75,7 @@ func evaluateSubtree(expr Expr, args map[string]interface{}) (Expr, error) {
 		case reflect.Bool:
 			return &BooleanLiteral{Val: args[index].(bool)}, nil
 		case reflect.Slice:
-			stringsSlice := []string{}
+			var stringsSlice []string
 			if slice, ok := args[index].([]interface{}); ok {
 				for _, value := range slice {
 					if s, ok := value.(string); ok {
@@ -92,7 +88,7 @@ func evaluateSubtree(expr Expr, args map[string]interface{}) (Expr, error) {
 				return &SliceStringLiteral{Val: args[index].([]string)}, nil
 			}
 		}
-		return falseExpr, fmt.Errorf("Unsupported argument %s type: %s", n.Val, kind)
+		return falseExpr, fmt.Errorf("unsupported argument %s type: %s", n.Val, kind)
 	}
 
 	return expr, nil
@@ -134,7 +130,7 @@ func applyOperator(op Token, l, r Expr) (*BooleanLiteral, error) {
 	case HAS:
 		return applyHAS(l, r)
 	}
-	return &BooleanLiteral{Val: false}, fmt.Errorf("Unsupported operator: %s", op)
+	return &BooleanLiteral{Val: false}, fmt.Errorf("unsupported operator: %s", op)
 }
 
 // applyINTERSECTS return true if intersect of two sets is not empty (todo: extend for number slices, upgrade for case insensitive)
@@ -183,6 +179,9 @@ func applyHAS(l, r Expr) (*BooleanLiteral, error) {
 // applyEREG applies EREG operation to l/r operands
 func applyNEREG(l, r Expr) (*BooleanLiteral, error) {
 	result, err := applyEREG(l, r)
+	if err != nil {
+		return falseExpr, err
+	}
 	result.Val = !result.Val
 	return result, err
 }
@@ -214,6 +213,9 @@ func applyEREG(l, r Expr) (*BooleanLiteral, error) {
 // applyNOTIN applies NOT IN operation to l/r operands
 func applyNOTIN(l, r Expr) (*BooleanLiteral, error) {
 	result, err := applyIN(l, r)
+	if err != nil {
+		return falseExpr, err
+	}
 	result.Val = !result.Val
 	return result, err
 }
@@ -267,7 +269,7 @@ func applyIN(l, r Expr) (*BooleanLiteral, error) {
 			}
 		}
 	default:
-		return nil, fmt.Errorf("Can not evaluate Literal of unknow type %s %T", t, t)
+		return nil, fmt.Errorf("can not evaluate Literal of unknow type %s %T", t, t)
 	}
 
 	return &BooleanLiteral{Val: found}, nil
@@ -287,7 +289,7 @@ func applyXOR(l, r Expr) (*BooleanLiteral, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &BooleanLiteral{Val: (a != b)}, nil
+	return &BooleanLiteral{Val: a != b}, nil
 }
 
 // applyNAND applies NAND operation to l/r operands
@@ -304,7 +306,7 @@ func applyNAND(l, r Expr) (*BooleanLiteral, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &BooleanLiteral{Val: (!(a && b))}, nil
+	return &BooleanLiteral{Val: !(a && b)}, nil
 }
 
 // applyAND applies && operation to l/r operands
@@ -321,7 +323,7 @@ func applyAND(l, r Expr) (*BooleanLiteral, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &BooleanLiteral{Val: (a && b)}, nil
+	return &BooleanLiteral{Val: a && b}, nil
 }
 
 // applyOR applies || operation to l/r operands
@@ -338,7 +340,7 @@ func applyOR(l, r Expr) (*BooleanLiteral, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &BooleanLiteral{Val: (a || b)}, nil
+	return &BooleanLiteral{Val: a || b}, nil
 }
 
 // applyEQ applies == operation to l/r operands
@@ -353,25 +355,25 @@ func applyEQ(l, r Expr) (*BooleanLiteral, error) {
 	if err == nil {
 		bs, err = getString(r)
 		if err != nil {
-			return falseExpr, fmt.Errorf("Cannot compare string with non-string")
+			return falseExpr, fmt.Errorf("cannot compare string with non-string")
 		}
-		return &BooleanLiteral{Val: (as == bs)}, nil
+		return &BooleanLiteral{Val: as == bs}, nil
 	}
 	an, err = getNumber(l)
 	if err == nil {
 		bn, err = getNumber(r)
 		if err != nil {
-			return falseExpr, fmt.Errorf("Cannot compare number with non-number")
+			return falseExpr, fmt.Errorf("cannot compare number with non-number")
 		}
-		return &BooleanLiteral{Val: (an == bn)}, nil
+		return &BooleanLiteral{Val: an == bn}, nil
 	}
 	ab, err = getBoolean(l)
 	if err == nil {
 		bb, err = getBoolean(r)
 		if err != nil {
-			return falseExpr, fmt.Errorf("Cannot compare boolean with non-boolean")
+			return falseExpr, fmt.Errorf("cannot compare boolean with non-boolean")
 		}
-		return &BooleanLiteral{Val: (ab == bb)}, nil
+		return &BooleanLiteral{Val: ab == bb}, nil
 	}
 	return falseExpr, nil
 }
@@ -388,25 +390,25 @@ func applyNQ(l, r Expr) (*BooleanLiteral, error) {
 	if err == nil {
 		bs, err = getString(r)
 		if err != nil {
-			return falseExpr, fmt.Errorf("Cannot compare string with non-string")
+			return falseExpr, fmt.Errorf("cannot compare string with non-string")
 		}
-		return &BooleanLiteral{Val: (as != bs)}, nil
+		return &BooleanLiteral{Val: as != bs}, nil
 	}
 	an, err = getNumber(l)
 	if err == nil {
 		bn, err = getNumber(r)
 		if err != nil {
-			return falseExpr, fmt.Errorf("Cannot compare number with non-number")
+			return falseExpr, fmt.Errorf("cannot compare number with non-number")
 		}
-		return &BooleanLiteral{Val: (an != bn)}, nil
+		return &BooleanLiteral{Val: an != bn}, nil
 	}
 	ab, err = getBoolean(l)
 	if err == nil {
 		bb, err = getBoolean(r)
 		if err != nil {
-			return falseExpr, fmt.Errorf("Cannot compare boolean with non-boolean")
+			return falseExpr, fmt.Errorf("cannot compare boolean with non-boolean")
 		}
-		return &BooleanLiteral{Val: (ab != bb)}, nil
+		return &BooleanLiteral{Val: ab != bb}, nil
 	}
 	return falseExpr, nil
 }
@@ -425,7 +427,7 @@ func applyGT(l, r Expr) (*BooleanLiteral, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &BooleanLiteral{Val: (a > b)}, nil
+	return &BooleanLiteral{Val: a > b}, nil
 }
 
 // applyGTE applies >= operation to l/r operands
@@ -442,7 +444,7 @@ func applyGTE(l, r Expr) (*BooleanLiteral, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &BooleanLiteral{Val: (a >= b)}, nil
+	return &BooleanLiteral{Val: a >= b}, nil
 }
 
 // applyLT applies < operation to l/r operands
@@ -459,7 +461,7 @@ func applyLT(l, r Expr) (*BooleanLiteral, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &BooleanLiteral{Val: (a < b)}, nil
+	return &BooleanLiteral{Val: a < b}, nil
 }
 
 // applyLTE applies <= operation to l/r operands
@@ -476,7 +478,7 @@ func applyLTE(l, r Expr) (*BooleanLiteral, error) {
 	if err != nil {
 		return falseExpr, err
 	}
-	return &BooleanLiteral{Val: (a <= b)}, nil
+	return &BooleanLiteral{Val: a <= b}, nil
 }
 
 // getBoolean performs type assertion and returns boolean value or error
@@ -485,7 +487,7 @@ func getBoolean(e Expr) (bool, error) {
 	case *BooleanLiteral:
 		return n.Val, nil
 	default:
-		return false, fmt.Errorf("Literal is not a boolean: %v", n)
+		return false, fmt.Errorf("literal is not a boolean: %v", n)
 	}
 }
 
@@ -495,7 +497,7 @@ func getString(e Expr) (string, error) {
 	case *StringLiteral:
 		return n.Val, nil
 	default:
-		return "", fmt.Errorf("Literal is not a string: %v", n)
+		return "", fmt.Errorf("literal is not a string: %v", n)
 	}
 }
 
@@ -505,7 +507,7 @@ func getSliceNumber(e Expr) ([]float64, error) {
 	case *SliceNumberLiteral:
 		return n.Val, nil
 	default:
-		return []float64{}, fmt.Errorf("Literal is not a slice of float64: %v", n)
+		return []float64{}, fmt.Errorf("literal is not a slice of float64: %v", n)
 	}
 }
 
@@ -515,7 +517,7 @@ func getSliceString(e Expr) ([]string, error) {
 	case *SliceStringLiteral:
 		return n.Val, nil
 	default:
-		return []string{}, fmt.Errorf("Literal is not a slice of string: %v", n)
+		return []string{}, fmt.Errorf("literal is not a slice of string: %v", n)
 	}
 }
 
@@ -525,6 +527,6 @@ func getNumber(e Expr) (float64, error) {
 	case *NumberLiteral:
 		return n.Val, nil
 	default:
-		return 0, fmt.Errorf("Literal is not a number: %v", n)
+		return 0, fmt.Errorf("literal is not a number: %v", n)
 	}
 }

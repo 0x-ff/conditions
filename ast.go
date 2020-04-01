@@ -94,7 +94,7 @@ type NumberLiteral struct {
 func (l *NumberLiteral) String() string { return strconv.FormatFloat(l.Val, 'f', 3, 64) }
 
 func (n *NumberLiteral) Args() []string {
-	args := []string{}
+	var args []string
 	return args
 }
 
@@ -108,7 +108,7 @@ func (l *SliceStringLiteral) String() string {
 }
 
 func (l *SliceStringLiteral) Args() []string {
-	args := []string{}
+	var args []string
 	return args
 }
 
@@ -122,7 +122,7 @@ func (l *SliceNumberLiteral) String() string {
 }
 
 func (l *SliceNumberLiteral) Args() []string {
-	args := []string{}
+	var args []string
 	return args
 }
 
@@ -140,7 +140,7 @@ func (l *BooleanLiteral) String() string {
 }
 
 func (l *BooleanLiteral) Args() []string {
-	args := []string{}
+	var args []string
 	return args
 }
 
@@ -158,7 +158,7 @@ type TimeLiteral struct {
 }
 
 func (l *StringLiteral) Args() []string {
-	args := []string{}
+	var args []string
 	return args
 }
 
@@ -186,7 +186,7 @@ func (e *BinaryExpr) String() string {
 }
 
 func (e *BinaryExpr) Args() []string {
-	args := []string{}
+	var args []string
 
 	args = append(e.LHS.Args(), args...)
 	args = append(e.RHS.Args(), args...)
@@ -203,7 +203,7 @@ type ParenExpr struct {
 func (e *ParenExpr) String() string { return fmt.Sprintf("(%s)", e.Expr.String()) }
 
 func (p *ParenExpr) Args() []string {
-	args := []string{}
+	var args []string
 	args = append(p.Expr.Args(), args...)
 
 	return args
